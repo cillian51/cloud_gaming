@@ -35,7 +35,7 @@ public class ShopEntry : MonoBehaviour
         }
 
         //// Update view to init
-        //this.UpdateView();
+        this.UpdateView();
     }
 
     void OnDisable()

@@ -1,95 +1,79 @@
 using System.Collections.Generic;
 using UnityEngine;
+using PlayFab;
+using PlayFab.ClientModels;
 
 public class Shop : MonoBehaviour
 {
-    public string shopName = "";
+    public string shopName = "catalog";
     public GameObject shopEntryPrefab = null;
-    //
     private List<ShopEntry> shopEntries = new List<ShopEntry>();
 
-    // Start is called before the first frame update
     void OnEnable()
     {
-        // Deactivate prefab in case
         if (this.shopEntryPrefab != null)
             this.shopEntryPrefab.gameObject.SetActive(false);
 
-        // Refresh prefab
-        this.RefreshLeaderboard();
+        RefreshShopItems();
     }
 
-    // Refresh
-    public void RefreshLeaderboard()
+    public void RefreshShopItems()
     {
-        // Check prefab
         if (this.shopEntryPrefab == null)
             return;
 
-        // Trigger news show if logged in
         if (PlayfabAuth.IsLoggedIn == true)
         {
-            // TODO: Retrieve item from our playfab inventory to know what we already bought
-            this.OnGetCatalogItemsSuccess(); // Fake
+            // Get the catalog items from PlayFab
+            GetCatalogItemsRequest request = new GetCatalogItemsRequest();
+            request.CatalogVersion = shopName;
+
+            PlayFabClientAPI.GetCatalogItems(request, OnGetCatalogItemsSuccess, OnGetCatalogItemsError);
         }
     }
 
-    private void OnGetCatalogItemsSuccess()
+    private void OnGetCatalogItemsSuccess(GetCatalogItemsResult result)
     {
         // Clear existing entries
-        this.ClearExistingEntries();
+        ClearExistingEntries();
 
-        // TODO: Retrieve data
         List<ShopItem> items = new List<ShopItem>();
 
-        // Go through scores
-        if (items != null)
+        
+
+        // Instantiate entries for each item
+        for (int i = 0; i < items.Count; i++)
         {
-            for (int i = 0; i < items.Count; i++)
+            ShopItem shopItem = items[i];
+            if (shopItem != null)
             {
-                ShopItem shopItem = items[i];
-                if (shopItem != null)
+                GameObject shopEntryGameobjectCopy = GameObject.Instantiate(this.shopEntryPrefab, this.shopEntryPrefab.transform.parent);
+                if (shopEntryGameobjectCopy != null)
                 {
-                    // Instantiate object copy
-                    GameObject shopEntryGameobjectCopy = GameObject.Instantiate(this.shopEntryPrefab, this.shopEntryPrefab.transform.parent);
-                    if (shopEntryGameobjectCopy != null)
+                    shopEntryGameobjectCopy.gameObject.SetActive(true);
+                    shopEntryGameobjectCopy.name = ("ShopItemEntry (" + shopItem.itemDisplayName + ")");
+                    ShopEntry shopEntry = shopEntryGameobjectCopy.GetComponent<ShopEntry>();
+                    if (shopEntry != null)
                     {
-                        // Activate at our prefab is deactivated
-                        shopEntryGameobjectCopy.gameObject.SetActive(true);
-
-                        // set name
-                        shopEntryGameobjectCopy.name = ("ShopItemEntry (" + shopItem.itemDisplayName + ")");
-
-                        // Get leaderboard entry
-                        ShopEntry shopEntry = shopEntryGameobjectCopy.GetComponent<ShopEntry>();
-                        if (shopEntry != null)
-                        {
-                            // Set value
-                            shopEntry.SetValue(shopItem);
-
-                            // Add to list
-                            if (this.shopEntries == null)
-                                this.shopEntries = new List<ShopEntry>();
-                            this.shopEntries.Add(shopEntry);
-                        }
-                        // Else, destroy object we just spawned
-                        else
-                        {
-                            GameObject.Destroy(shopEntryGameobjectCopy);
-                        }
+                        shopEntry.SetValue(shopItem);
+                        if (this.shopEntries == null)
+                            this.shopEntries = new List<ShopEntry>();
+                        this.shopEntries.Add(shopEntry);
+                    }
+                    else
+                    {
+                        GameObject.Destroy(shopEntryGameobjectCopy);
                     }
                 }
             }
         }
     }
 
-    private void OnGetCatalogItemsError()
+    private void OnGetCatalogItemsError(PlayFabError error)
     {
-        // TODO
-        Debug.LogError("Shop.OnGetCatalogItemsError() - Error: TODO");
+        Debug.LogError("Shop.OnGetCatalogItemsError() - Error: " + error.ErrorMessage);
     }
 
-    // Clear existing entries
     public void ClearExistingEntries()
     {
         if (this.shopEntries != null)
@@ -101,9 +85,9 @@ public class Shop : MonoBehaviour
                     GameObject.Destroy(this.shopEntries[0].gameObject);
                 }
 
-                // Remove first entry
                 this.shopEntries.RemoveAt(0);
             }
         }
     }
+
 }
